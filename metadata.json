@@ -1,0 +1,5 @@
+{
+  "name": "CyberLaw Tutor",
+  "description": "An AI-powered teaching assistant for Cybersecurity Law, designed to help students master materials, organize outlines, and practice exam writing using the Gemini API.",
+  "requestFramePermissions": []
+}
