@@ -79,7 +79,7 @@ export const generateTutorResponse = async (
     const messageParts = [...contextParts, { text: prompt }];
 
     const result = await chat.sendMessage({ 
-        message: { parts: messageParts } 
+        message: messageParts 
     });
     
     return result.text || "I'm sorry, I couldn't generate a response regarding that legal concept.";
