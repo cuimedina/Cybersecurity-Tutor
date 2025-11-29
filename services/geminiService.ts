@@ -1,5 +1,5 @@
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { Message, Role, StudyContext, StudyMaterial } from "../types";
+import { GoogleGenAI } from "@google/genai";
+import { Message, Role, StudyContext } from "../types";
 
 const SYSTEM_INSTRUCTION = `
 You are a World-Class Cybersecurity Law Tutor and Exam Coach. 
@@ -23,8 +23,32 @@ STYLE GUIDELINES:
 - Be precise with legal terminology but accessible in explanation.
 `;
 
-// Initialize the API
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization holder
+let aiInstance: GoogleGenAI | null = null;
+
+const getAI = () => {
+    if (aiInstance) return aiInstance;
+    
+    // Safely retrieve the key from Vite environment or process environment
+    let apiKey = '';
+    
+    try {
+        if (import.meta && import.meta.env && import.meta.env.VITE_API_KEY) {
+            apiKey = import.meta.env.VITE_API_KEY;
+        } else if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+            apiKey = process.env.API_KEY;
+        }
+    } catch (e) {
+        console.warn("Environment variable access failed", e);
+    }
+    
+    if (!apiKey) {
+        throw new Error("API Key is missing. Please check your Vercel Environment Variables (VITE_API_KEY).");
+    }
+    
+    aiInstance = new GoogleGenAI({ apiKey: apiKey });
+    return aiInstance;
+};
 
 const getContextParts = (context: StudyContext | null) => {
     if (!context || context.materials.length === 0) return [];
@@ -57,6 +81,7 @@ export const generateTutorResponse = async (
   prompt: string
 ): Promise<string> => {
   try {
+    const ai = getAI();
     const model = "gemini-2.5-flash"; 
 
     const chatHistory = history
@@ -70,7 +95,7 @@ export const generateTutorResponse = async (
       model: model,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.5, // Lower temperature for stricter adherence to context
+        temperature: 0.5,
       },
       history: chatHistory
     });
@@ -95,6 +120,7 @@ export const generateKnowledgeBankAnalysis = async (
     type: 'OUTLINE' | 'PATTERNS' | 'RULES'
 ): Promise<string> => {
   try {
+    const ai = getAI();
     let promptText = "";
     
     if (type === 'OUTLINE') {
@@ -153,7 +179,6 @@ export const generateKnowledgeBankAnalysis = async (
     return response.text || "Could not generate analysis.";
   } catch (error: any) {
     console.error("Analysis Generation Error:", error);
-    // Return the actual error message to help the user debug (e.g. 413 Payload Too Large)
     return `FAILED: ${error.message || "Unknown API Error"}. \n\nTip: If you uploaded large PDFs (scans), try removing them and adding smaller files. The API has a size limit for direct uploads.`;
   }
 };
@@ -166,6 +191,7 @@ export const generatePracticeHypo = async (topic: string): Promise<string> => {
     `;
 
     try {
+        const ai = getAI();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -173,6 +199,6 @@ export const generatePracticeHypo = async (topic: string): Promise<string> => {
         });
         return response.text || "Could not generate hypothetical.";
     } catch (e) {
-        return "Error generating hypothetical.";
+        return "Error generating hypothetical. Please check your API Key.";
     }
 }
