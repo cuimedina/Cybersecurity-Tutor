@@ -23,8 +23,23 @@ STYLE GUIDELINES:
 - Be precise with legal terminology but accessible in explanation.
 `;
 
-// Initialize the API
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization holder
+let aiInstance: GoogleGenAI | null = null;
+
+const getAI = () => {
+    if (aiInstance) return aiInstance;
+    
+    // Safely retrieve the key from Vite environment
+    // @ts-ignore
+    const apiKey = import.meta.env.VITE_API_KEY;
+    
+    if (!apiKey) {
+        throw new Error("API Key is missing. Please check your Vercel Environment Variables (VITE_API_KEY).");
+    }
+    
+    aiInstance = new GoogleGenAI({ apiKey: apiKey });
+    return aiInstance;
+};
 
 const getContextParts = (context: StudyContext | null) => {
     if (!context || context.materials.length === 0) return [];
@@ -57,6 +72,7 @@ export const generateTutorResponse = async (
   prompt: string
 ): Promise<string> => {
   try {
+    const ai = getAI();
     const model = "gemini-2.5-flash"; 
 
     const chatHistory = history
@@ -95,6 +111,7 @@ export const generateKnowledgeBankAnalysis = async (
     type: 'OUTLINE' | 'PATTERNS' | 'RULES'
 ): Promise<string> => {
   try {
+    const ai = getAI();
     let promptText = "";
     
     if (type === 'OUTLINE') {
@@ -166,6 +183,7 @@ export const generatePracticeHypo = async (topic: string): Promise<string> => {
     `;
 
     try {
+        const ai = getAI();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -173,6 +191,6 @@ export const generatePracticeHypo = async (topic: string): Promise<string> => {
         });
         return response.text || "Could not generate hypothetical.";
     } catch (e) {
-        return "Error generating hypothetical.";
+        return "Error generating hypothetical. Please check your API Key.";
     }
 }
